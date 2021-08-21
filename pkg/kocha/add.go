@@ -1,7 +1,22 @@
 package kocha
 
-import "fmt"
+import (
+	"github.com/tkmcclellan/kocha/internal/providers"
 
-func Add(provider string, dlmode string) {
-	fmt.Println("Hello World")
+	"errors"
+)
+
+func Add(p string, d string, n string) error {
+	if n == "" {
+		return errors.New("missing manga title")
+	}
+
+	provider, err := providers.FindProvider(p)
+	if err != nil {
+		return err
+	}
+
+	provider.Search(n)
+
+	return nil
 }

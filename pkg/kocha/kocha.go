@@ -58,5 +58,5 @@ func Init() error {
 		log.Printf("%q: %s\n", err, createTables)
 	}
 
-	return err
+	return nil
 }

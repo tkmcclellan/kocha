@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-
 	"github.com/tkmcclellan/kocha/pkg/kocha"
+
+	"fmt"
+	"os"
+	"strings"
 )
 
 // addCmd represents the add command
@@ -19,9 +22,14 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		provider, _ := cmd.Flags().GetString("provider")
 		dlmode, _ := cmd.Flags().GetString("dlmode")
+		name := strings.Join(args, " ")
 
 		kocha.Init()
-		kocha.Add(provider, dlmode)
+		err := kocha.Add(provider, dlmode, name)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
+			os.Exit(1)
+		}
 	},
 }
 

@@ -1,5 +1,9 @@
 package providers
 
-type MangaKakolot struct {
-	Provider
+import "errors"
+
+type MangaKakolot struct{}
+
+func (m MangaKakolot) Search(name string) (SearchResult, error) {
+	return SearchResult{name: "test"}, errors.New("unimplemented")
 }
