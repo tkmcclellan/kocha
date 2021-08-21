@@ -4,7 +4,7 @@
   "description": "Kocha - Black Tea - A tool for reading manga.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:linux:x64": "GOOS=linux GOARCH=amd64 go build -o bin/kocha-amd64-linux pkg/kocha.go"
   },
   "repository": {
     "type": "git",
