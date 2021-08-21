@@ -2,6 +2,6 @@ package kocha
 
 import "fmt"
 
-func Add() {
+func Add(provider string, dlmode string) {
 	fmt.Println("Hello World")
 }

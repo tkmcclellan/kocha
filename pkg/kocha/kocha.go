@@ -9,7 +9,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func Init() {
+func Init() error {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
@@ -35,4 +35,6 @@ func Init() {
 	if err != nil {
 		log.Printf("%q: %s\n", err, createTables)
 	}
+
+	return err
 }
