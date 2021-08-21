@@ -2,6 +2,6 @@ package kocha
 
 import "fmt"
 
-func main() {
+func Test() {
 	fmt.Println("Hello World")
 }
