@@ -1,7 +1,7 @@
 package main
 
-import "github.com/tkmcclellan/kocha/pkg/kocha"
+import "github.com/tkmcclellan/kocha/cmd"
 
 func main() {
-	kocha.Test()
+	cmd.Execute()
 }
