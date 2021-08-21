@@ -1,0 +1,19 @@
+{
+  "name": "kocha",
+  "version": "0.0.1",
+  "description": "Kocha - Black Tea - A tool for reading manga.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tkmcclellan/kocha.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tkmcclellan/kocha/issues"
+  },
+  "homepage": "https://github.com/tkmcclellan/kocha#readme"
+}
