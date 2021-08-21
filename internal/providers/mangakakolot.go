@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/tkmcclellan/kocha/models"
+	"github.com/tkmcclellan/kocha/internal/models"
 )
 
 type MangaKakalot struct{}

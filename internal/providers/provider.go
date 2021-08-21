@@ -3,7 +3,7 @@ package providers
 import (
 	"errors"
 
-	"github.com/tkmcclellan/kocha/models"
+	"github.com/tkmcclellan/kocha/internal/models"
 )
 
 type Provider interface {
