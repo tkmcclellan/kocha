@@ -36,7 +36,3 @@ func Init() {
 		log.Printf("%q: %s\n", err, createTables)
 	}
 }
-
-func Add() {
-	Init()
-}
