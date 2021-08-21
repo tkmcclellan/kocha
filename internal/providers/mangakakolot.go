@@ -52,21 +52,25 @@ func (m MangaKakalot) Search(name string) (SearchResult, error) {
 		)
 		manga.Authors = authors
 
-		time_string := strings.Trim(strings.SplitN(info.Nodes[1].FirstChild.Data, ":", 2)[1], " ")
+		raw_time := strings.Trim(strings.SplitN(info.Nodes[1].FirstChild.Data, ":", 2)[1], " ")
 		r2 := regexp.MustCompile(`(.*),`)
-		date := strings.Trim(r2.FindString(time_string), ",")
+		date := strings.Trim(r2.FindString(raw_time), ",")
+		date_split := strings.Split(date, " ")
+		date = fmt.Sprintf("%s %s", date_split[1], date_split[0])
 		r3 := regexp.MustCompile(`,([0-9]{4})`)
-		year := strings.Trim(r3.FindString(time_string), ",")
+		year := strings.Trim(r3.FindString(raw_time), ",")
 		r4 := regexp.MustCompile(`-\s(.*)`)
-		l := strings.TrimPrefix(r4.FindString(time_string), "- ")
+		time_string := strings.TrimPrefix(r4.FindString(raw_time), "- ")
+		time_suffix := strings.Split(time_string, " ")[1] // Someone please save me from this hell
 
-		update_time, err := time.Parse("Jan 03, 2013 02:30 AM", fmt.Sprintf("%s, %s %s", date, year, l))
+		update_time, err := time.Parse(fmt.Sprintf("02 Jan 2006 15:04 %s", time_suffix), fmt.Sprintf("%s %s %s", date, year, time_string))
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
+		manga.Updated = update_time
 
-		fmt.Printf("%#v\n", update_time)
+		fmt.Printf("%#v\n", manga)
 
 		result.Manga = append(result.Manga, manga)
 	})
