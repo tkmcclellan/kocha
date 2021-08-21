@@ -11,7 +11,9 @@ type Provider interface {
 }
 
 type SearchResult struct {
-	Manga []models.Manga
+	Manga        []models.Manga
+	total_pages  uint64
+	current_page uint64
 }
 
 func FindProvider(provider string) (Provider, error) {

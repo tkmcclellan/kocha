@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,6 +41,13 @@ func (m MangaKakalot) Search(name string) (SearchResult, error) {
 		var manga models.Manga
 
 		manga.Title = s.Find("h3.story_name > a").Text()
+		href, exists := s.Find("h3.story_name > a").Attr("href")
+		if !exists {
+			log.Fatal(errors.New("manga missing link"))
+			return
+		}
+
+		manga.Uri = "https://ww.mangakakalot.tv" + href
 
 		info := s.Find("span")
 		r1 := regexp.MustCompile(`\n(\s+)`)
@@ -52,6 +60,7 @@ func (m MangaKakalot) Search(name string) (SearchResult, error) {
 		)
 		manga.Authors = authors
 
+		// TODO: Someone please save me from this hell
 		raw_time := strings.Trim(strings.SplitN(info.Nodes[1].FirstChild.Data, ":", 2)[1], " ")
 		r2 := regexp.MustCompile(`(.*),`)
 		date := strings.Trim(r2.FindString(raw_time), ",")
@@ -61,7 +70,7 @@ func (m MangaKakalot) Search(name string) (SearchResult, error) {
 		year := strings.Trim(r3.FindString(raw_time), ",")
 		r4 := regexp.MustCompile(`-\s(.*)`)
 		time_string := strings.TrimPrefix(r4.FindString(raw_time), "- ")
-		time_suffix := strings.Split(time_string, " ")[1] // Someone please save me from this hell
+		time_suffix := strings.Split(time_string, " ")[1]
 
 		update_time, err := time.Parse(fmt.Sprintf("02 Jan 2006 15:04 %s", time_suffix), fmt.Sprintf("%s %s %s", date, year, time_string))
 		if err != nil {
@@ -70,10 +79,19 @@ func (m MangaKakalot) Search(name string) (SearchResult, error) {
 		}
 		manga.Updated = update_time
 
-		fmt.Printf("%#v\n", manga)
-
 		result.Manga = append(result.Manga, manga)
 	})
+
+	r1 := regexp.MustCompile(`[0-9]+`)
+	total_pages, err := strconv.ParseUint(r1.FindString(doc.Find("a.page_last").Text()), 10, 64)
+	if err != nil {
+		log.Fatal(err)
+		return result, err
+	}
+	result.total_pages = total_pages
+
+	current_page, err := strconv.ParseUint(doc.Find("a.page_select").Text(), 10, 64)
+	result.current_page = current_page
 
 	return result, errors.New("unimplemented")
 }
