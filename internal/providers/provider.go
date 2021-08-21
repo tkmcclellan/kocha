@@ -1,19 +1,23 @@
 package providers
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/tkmcclellan/kocha/models"
+)
 
 type Provider interface {
 	Search(name string) (SearchResult, error)
 }
 
 type SearchResult struct {
-	name string
+	Manga []models.Manga
 }
 
 func FindProvider(provider string) (Provider, error) {
 	switch provider {
-	case "mangakakolot":
-		m := MangaKakolot{}
+	case "mangakakalot":
+		m := MangaKakalot{}
 		return m, nil
 	default:
 		return nil, errors.New("invalid provider")

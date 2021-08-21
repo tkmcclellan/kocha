@@ -35,6 +35,6 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(addCmd)
-	addCmd.Flags().String("provider", "mangakakolot", "[mangakakolot]")
+	addCmd.Flags().String("provider", "mangakakalot", "[mangakakalot]")
 	addCmd.Flags().String("dlmode", "dynamic", "[dynamic, all, none]")
 }

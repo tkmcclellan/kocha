@@ -1,6 +1,8 @@
 package kocha
 
 import (
+	"strings"
+
 	"github.com/tkmcclellan/kocha/internal/providers"
 
 	"errors"
@@ -16,7 +18,12 @@ func Add(p string, d string, n string) error {
 		return err
 	}
 
-	provider.Search(n)
+	search_string := strings.ReplaceAll(n, " ", "+")
+
+	_, err = provider.Search(search_string)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
