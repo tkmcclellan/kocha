@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/tkmcclellan/kocha/internal/models"
@@ -51,7 +52,21 @@ func (m MangaKakalot) Search(name string) (SearchResult, error) {
 		)
 		manga.Authors = authors
 
-		fmt.Printf("%#v\n", manga)
+		time_string := strings.Trim(strings.SplitN(info.Nodes[1].FirstChild.Data, ":", 2)[1], " ")
+		r2 := regexp.MustCompile(`(.*),`)
+		date := strings.Trim(r2.FindString(time_string), ",")
+		r3 := regexp.MustCompile(`,([0-9]{4})`)
+		year := strings.Trim(r3.FindString(time_string), ",")
+		r4 := regexp.MustCompile(`-\s(.*)`)
+		l := strings.TrimPrefix(r4.FindString(time_string), "- ")
+
+		update_time, err := time.Parse("Jan 03, 2013 02:30 AM", fmt.Sprintf("%s, %s %s", date, year, l))
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		fmt.Printf("%#v\n", update_time)
 
 		result.Manga = append(result.Manga, manga)
 	})
