@@ -1,12 +1,12 @@
 package kocha
 
 import (
-	"database/sql"
 	"log"
 	"os"
 	"path"
 
 	_ "github.com/mattn/go-sqlite3"
+	util "github.com/tkmcclellan/kocha/internal"
 )
 
 func Init() error {
@@ -21,9 +21,8 @@ func Init() error {
 	if os.IsNotExist(err) {
 		os.Mkdir(dirpath, 0775)
 	}
-	dbpath := path.Join(dirpath, "manga.db")
 
-	db, err := sql.Open("sqlite3", dbpath)
+	db, err := util.GetDatabase()
 	if err != nil {
 		log.Fatal(err)
 		return err
