@@ -13,6 +13,7 @@ func Init() error {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
+		return err
 	}
 	dirpath := path.Join(homedir, ".kocha")
 
@@ -25,6 +26,7 @@ func Init() error {
 	db, err := sql.Open("sqlite3", dbpath)
 	if err != nil {
 		log.Fatal(err)
+		return err
 	}
 	defer db.Close()
 
