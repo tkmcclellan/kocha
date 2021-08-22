@@ -1,10 +1,10 @@
 package models
 
 import (
+	util "github.com/tkmcclellan/kocha/internal"
+
 	"log"
 	"time"
-
-	util "github.com/tkmcclellan/kocha/internal"
 )
 
 type Manga struct {

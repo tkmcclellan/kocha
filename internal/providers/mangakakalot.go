@@ -93,5 +93,5 @@ func (m MangaKakalot) Search(name string) (SearchResult, error) {
 	current_page, err := strconv.ParseUint(doc.Find("a.page_select").Text(), 10, 64)
 	result.current_page = current_page
 
-	return result, errors.New("unimplemented")
+	return result, nil
 }
