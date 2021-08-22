@@ -10,7 +10,9 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -51,9 +53,16 @@ to quickly create a Cobra application.`,
 
 		writer := uilive.New()
 		writer.Start()
+		defer writer.Stop()
 
 		ch := make(chan string)
 		go util.MonitorStdin(ch)
+		defer close(ch)
+		defer util.Cleanup()
+
+		c := make(chan os.Signal)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		go util.MonitorSigint(c)
 
 		for {
 			var buffer bytes.Buffer
@@ -72,9 +81,6 @@ to quickly create a Cobra application.`,
 			time.Sleep(time.Millisecond * 100)
 		}
 
-		writer.Stop()
-		close(ch)
-		util.Cleanup()
 	},
 }
 

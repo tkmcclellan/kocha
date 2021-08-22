@@ -33,3 +33,9 @@ func MonitorStdin(ch chan string) {
 func Cleanup() {
 	exec.Command("stty", "-F", "/dev/tty", "sane").Run()
 }
+
+func MonitorSigint(ch chan os.Signal) {
+	<-ch
+	Cleanup()
+	os.Exit(1)
+}
