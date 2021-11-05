@@ -1,14 +1,29 @@
 package kocha
 
 import (
-	"github.com/tkmcclellan/kocha/internal/providers"
+	"fmt"
 
-	"errors"
+	"github.com/tkmcclellan/kocha/internal/models"
+	"github.com/tkmcclellan/kocha/internal/providers"
 )
 
-func Add(p providers.Provider, id string) error {
-	if id == "" {
-		return errors.New("missing manga id")
+func Add(manga *models.Manga, dlmode string) error {
+	manga.Dlmode = dlmode
+	if manga.Exists() != nil {
+		fmt.Println("Manga already added!")
+		return nil
+	}
+	manga.Create()
+	provider, err := providers.FindProvider(manga.Provider)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	err = provider.DownloadManga(manga)
+	if err != nil {
+		fmt.Println(err)
+		return err
 	}
 
 	return nil

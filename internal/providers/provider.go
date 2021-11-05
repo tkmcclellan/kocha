@@ -7,13 +7,15 @@ import (
 )
 
 type Provider interface {
-	Search(name string) (SearchResult, error)
+	Search(name string, page uint64) (SearchResult, error)
+	DownloadManga(manga *models.Manga) error
+	DownloadChapter(chapter models.Chapter, completed chan bool)
 }
 
 type SearchResult struct {
-	Manga        []models.Manga
-	total_pages  uint64
-	current_page uint64
+	Manga       []models.Manga
+	TotalPages  uint64
+	CurrentPage uint64
 }
 
 func FindProvider(provider string) (Provider, error) {

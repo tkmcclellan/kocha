@@ -1,9 +1,11 @@
 package cmd
 
 import (
-	"fmt"
+	"os"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"github.com/tkmcclellan/kocha/pkg/kocha"
 )
 
 // listCmd represents the list command
@@ -17,7 +19,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("list called")
+		List()
 	},
 }
 
@@ -33,4 +35,19 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func List() {
+	manga := kocha.List()
+	data := [][]string{}
+	for _, m := range manga {
+		data = append(data, m.ToRow())
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetRowLine(true)
+	table.SetHeader([]string{"ID", "Title", "Authors", "Uri", "Updated At", "Download Mode"})
+
+	table.AppendBulk(data)
+	table.Render()
 }

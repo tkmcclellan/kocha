@@ -1,26 +1,13 @@
 package cmd
 
 import (
-	"github.com/gosuri/uilive"
-	"github.com/spf13/cobra"
-	util "github.com/tkmcclellan/kocha/internal"
-	"github.com/tkmcclellan/kocha/internal/providers"
-	"github.com/tkmcclellan/kocha/pkg/kocha"
-
-	"bytes"
-	"fmt"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
-	"time"
-)
 
-func getc(f *os.File) (byte, error) {
-	b := make([]byte, 1)
-	_, err := f.Read(b)
-	return b[0], err
-}
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/spf13/cobra"
+	"github.com/tkmcclellan/kocha/internal/models"
+	"github.com/tkmcclellan/kocha/pkg/kocha"
+)
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
@@ -33,59 +20,112 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		kocha.Init()
-
-		provider_type, _ := cmd.Flags().GetString("provider")
-		// dlmode, _ := cmd.Flags().GetString("dlmode")
+		providerType, _ := cmd.Flags().GetString("provider")
+		dlmode, _ := cmd.Flags().GetString("dlmode")
 		name := strings.Join(args, " ")
 
-		provider, err := providers.FindProvider(provider_type)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error:", err)
-			os.Exit(1)
-		}
-
-		search_results, err := provider.Search(name)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error:", err)
-			os.Exit(1)
-		}
-
-		writer := uilive.New()
-		writer.Start()
-		defer writer.Stop()
-
-		ch := make(chan string)
-		go util.MonitorStdin(ch)
-		defer close(ch)
-		defer util.Cleanup()
-
-		c := make(chan os.Signal)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		go util.MonitorSigint(c)
-
-		for {
-			var buffer bytes.Buffer
-			for i, m := range search_results.Manga {
-				buffer.WriteString(fmt.Sprintf("id: %d\ttitle: %s\tauthors: %s\n%s\n", i, m.Title, strings.Join(m.Authors, ","), strings.Repeat("~", 100)))
-			}
-			fmt.Fprintf(writer, buffer.String())
-			stdin, _ := <-ch
-			if stdin == "q" {
-				break
-			} else {
-				buffer.Reset()
-				buffer.WriteString("here")
-				fmt.Fprintf(writer, buffer.String())
-			}
-			time.Sleep(time.Millisecond * 100)
-		}
-
+		Add(providerType, dlmode, name)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(addCmd)
-	addCmd.Flags().String("provider", "mangakakalot", "[mangakakalot]")
-	addCmd.Flags().String("dlmode", "dynamic", "[dynamic, all, none]")
+	addCmd.Flags().String("provider", "", "[mangakakalot]")
+	addCmd.Flags().String("dlmode", "", "[dynamic, all, none]")
+}
+
+func Add(providerType string, dlmode string, name string) {
+	if len(name) == 0 {
+		question := &survey.Input{
+			Message: "What manga do you want to add?",
+		}
+
+		err := survey.AskOne(question, &name, survey.WithValidator(survey.Required))
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if len(providerType) == 0 {
+		question := &survey.Select{
+			Message: "Provider:",
+			Options: []string{"Mangakakalot"},
+			Default: "Mangakakalot",
+		}
+
+		var selection string
+		err := survey.AskOne(question, &selection, survey.WithValidator(survey.Required))
+		if err != nil {
+			panic(err)
+		}
+
+		providerType = strings.ToLower(selection)
+	}
+
+	if len(dlmode) == 0 {
+		question := &survey.Select{
+			Message: "Download Mode:",
+			Options: []string{
+				"Dynamic: download as you read",
+				"All: download all chapters now",
+				"None: don't download any chapters"},
+			Default: "Dynamic: download as you read",
+		}
+
+		var selection string
+		err := survey.AskOne(question, &selection, survey.WithValidator(survey.Required))
+		if err != nil {
+			panic(err)
+		}
+
+		if strings.Contains(selection, "All") {
+			dlmode = "all"
+		} else if strings.Contains(selection, "Dynamic") {
+			dlmode = "dynamic"
+		} else if strings.Contains(selection, "None") {
+			dlmode = "none"
+		} else {
+			panic("invalid download mode")
+		}
+	}
+
+	var page uint64 = 1
+	searchResults := kocha.Search(name, providerType, page)
+	for {
+		var options []string
+		items := make(map[string]models.Manga)
+		if page > 1 {
+			options = append(options, "Previous")
+		}
+		for _, manga := range searchResults.Manga {
+			items[manga.ToReadable()] = manga
+			options = append(options, manga.ToReadable())
+		}
+		if page < searchResults.TotalPages {
+			options = append(options, "Next")
+		}
+
+		question := &survey.Select{
+			Message: "Choose a manga:",
+			Options: options,
+		}
+
+		var selection string
+		err := survey.AskOne(question, &selection)
+		if err != nil {
+			panic(err)
+		}
+
+		if selection == "Next" {
+			page += 1
+			continue
+		}
+		if selection == "Previous" {
+			page -= 1
+			continue
+		}
+		manga := items[selection]
+		kocha.Add(&manga, dlmode)
+		return
+	}
 }
