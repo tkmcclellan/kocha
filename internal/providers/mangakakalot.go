@@ -16,6 +16,10 @@ import (
 	"github.com/tkmcclellan/kocha/internal/util"
 )
 
+func init() {
+	ProviderList["MangaKakalot"] = MangaKakalot{}
+}
+
 type MangaKakalot struct{}
 
 func (m MangaKakalot) Search(name string, page uint64) (SearchResult, error) {

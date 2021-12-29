@@ -6,6 +6,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 	"github.com/tkmcclellan/kocha/internal/models"
+	"github.com/tkmcclellan/kocha/internal/providers"
 	"github.com/tkmcclellan/kocha/pkg/kocha"
 )
 
@@ -50,7 +51,7 @@ func Add(providerType string, dlmode string, name string) {
 	if len(providerType) == 0 {
 		question := &survey.Select{
 			Message: "Provider:",
-			Options: []string{"Mangakakalot"},
+			Options: providers.ListProviders(),
 			Default: "Mangakakalot",
 		}
 

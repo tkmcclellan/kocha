@@ -6,6 +6,8 @@ import (
 	"github.com/tkmcclellan/kocha/internal/models"
 )
 
+var ProviderList = make(map[string]Provider)
+
 type Provider interface {
 	Search(name string, page uint64) (SearchResult, error)
 	DownloadManga(manga *models.Manga) error
@@ -19,11 +21,22 @@ type SearchResult struct {
 }
 
 func FindProvider(provider string) (Provider, error) {
-	switch provider {
-	case "mangakakalot":
-		m := MangaKakalot{}
-		return m, nil
-	default:
-		return nil, errors.New("invalid provider")
+	foundProvider := ProviderList[provider]
+	if foundProvider != nil {
+		return foundProvider, nil
+	} else {
+		return nil, errors.New("Invalid provider")
 	}
+}
+
+func ListProviders() []string {
+	i := 0
+	keys := make([]string, len(ProviderList))
+
+	for k := range ProviderList {
+		keys[i] = k
+		i++
+	}
+
+	return keys
 }
