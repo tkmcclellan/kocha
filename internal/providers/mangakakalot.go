@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -93,11 +94,10 @@ func (m MangaKakalot) Search(name string, page uint64) (SearchResult, error) {
 	return result, nil
 }
 
-func (mangakakalot MangaKakalot) DownloadChapter(chapter models.Chapter, completed chan bool) {
+func (mangakakalot MangaKakalot) DownloadChapter(chapter models.Chapter) {
 	doc, err := FetchDocument(chapter.Uri)
 	if err != nil {
 		fmt.Println(err)
-		completed <- false
 		return
 	}
 
@@ -113,10 +113,10 @@ func (mangakakalot MangaKakalot) DownloadChapter(chapter models.Chapter, complet
 	for i := 0; i < numImages; i++ {
 		<-imageCompleted
 	}
-	completed <- true
 
 	err = util.ChapterToPdf(dirname)
 	if err != nil {
+		fmt.Println("here")
 		panic(err)
 	}
 }
@@ -166,18 +166,19 @@ func (mangakakalot MangaKakalot) DownloadManga(manga *models.Manga) error {
 
 	downloadCount := len(downloadList)
 	if downloadCount > 0 {
+		var wg sync.WaitGroup
 		bar := pb.StartNew(downloadCount)
-		completed := make(chan bool)
 		for _, chapter := range downloadList {
-			go mangakakalot.DownloadChapter(chapter, completed)
+			wg.Add(1)
+			go func(chapter models.Chapter) {
+				mangakakalot.DownloadChapter(chapter)
+				wg.Done()
+				bar.Increment()
+			}(chapter)
 		}
 
-		for range downloadList {
-			<-completed
-			bar.Increment()
-		}
+		wg.Wait()
 		bar.Finish()
-
 	}
 	return nil
 }

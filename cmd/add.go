@@ -33,7 +33,7 @@ library, downloading certain chapters of your manga, etc.
 func init() {
 	rootCmd.AddCommand(addCmd)
 	addCmd.Flags().String("provider", "", "[mangakakalot]")
-	addCmd.Flags().String("dlmode", "", "[dynamic, all, none]")
+	addCmd.Flags().StringP("dlmode", "d", "", "[dynamic, all, none]")
 	addCmd.Flags().StringP("url", "u", "", "add by url")
 }
 
@@ -90,6 +90,11 @@ func parseDlmode(dlmodeFlag string) (dlmode string) {
 func Add(url string, dlmode string, provider string, name string) {
 	if len(url) > 0 {
 		AddFromUrl(dlmode, url)
+		return
+	}
+
+	if len(name) > 0 {
+		AddFromQuery(provider, dlmode, name)
 		return
 	}
 

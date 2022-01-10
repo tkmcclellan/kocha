@@ -3,10 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 	"github.com/tkmcclellan/kocha/internal/models"
 	"github.com/tkmcclellan/kocha/internal/providers"
@@ -84,20 +85,19 @@ func chapterRange(chapters []models.Chapter, currentChapter int) (int, int) {
 }
 
 func downloadWithinRange(provider providers.Provider, manga *models.Manga, chapters []models.Chapter, low int, high int) {
-	completed := make(chan bool)
-	var downloadCount int
 	for i := low; i <= high; i++ {
 		_, err := os.Stat(filepath.Join(util.MangaPath, manga.Dirname(), chapters[i].Dirname()))
 		if os.IsNotExist(err) {
-			fmt.Println("downloading chapter ", i)
-			go provider.DownloadChapter(chapters[i], completed)
-			downloadCount++
-		}
-	}
-
-	if downloadCount > 0 {
-		for i := 0; i < downloadCount; i++ {
-			<-completed
+			fmt.Println("Downloading chapter", i+1)
+			go provider.DownloadChapter(chapters[i])
+			// writer := uilive.New()
+			// writer.Start()
+			// fmt.Fprintln(writer, "Downloading chapter", i+1)
+			// go func(writer *uilive.Writer) {
+			// provider.DownloadChapter(chapters[i])
+			// fmt.Fprintf(writer, "\033[1AChapter %d downloaded        \n\033[1m\033[92m? \033[37mWhat would you like to do?  \033[0m\033[36m[Use arrows to move, type to filter]\033[0m", i)
+			// writer.Stop()
+			// }(writer)
 		}
 	}
 }
@@ -107,7 +107,7 @@ func deleteOutsideRange(manga *models.Manga, chapters []models.Chapter, low int,
 		chapterPath := filepath.Join(util.MangaPath, manga.Dirname(), chapters[i].Dirname())
 		_, err := os.Stat(chapterPath)
 		if err == nil && (i < low || i > high) {
-			fmt.Println("deleting chapter ", i)
+			fmt.Println("Deleting chapter", i)
 			err := util.DeleteDir(filepath.Join(manga.Dirname(), chapters[i].Dirname()))
 			if err != nil {
 				panic(err)
@@ -116,29 +116,41 @@ func deleteOutsideRange(manga *models.Manga, chapters []models.Chapter, low int,
 	}
 }
 
+func openbrowser(url string) (err error) {
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("x-www-browser", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	return err
+}
+
 func readManga(manga *models.Manga) {
 	chapters := manga.Chapters(nil)
 	currentChapter := manga.CurrentChapter
 	provider, err := providers.FindProvider(manga.Provider)
 	if err != nil {
+		fmt.Println(err)
 		panic(err)
 	}
-
-	high, low := chapterRange(chapters, currentChapter)
-	downloadWithinRange(provider, manga, chapters, low, high)
-	deleteOutsideRange(manga, chapters, low, high)
 
 	for {
 		chapter := chapters[currentChapter]
 		filePath := filepath.Join(util.MangaPath, manga.Dirname(), chapter.Dirname(), util.CleanString(chapter.Title)+".pdf")
-		err = open.Run(filePath)
+		err := openbrowser(filePath)
 		if err != nil {
+			fmt.Println(err)
 			panic(err)
 		}
 
 		high, low := chapterRange(chapters, currentChapter)
-		go downloadWithinRange(provider, manga, chapters, low, high)
-		go deleteOutsideRange(manga, chapters, low, high)
+		downloadWithinRange(provider, manga, chapters, low, high)
+		deleteOutsideRange(manga, chapters, low, high)
 
 		options := []string{}
 		if currentChapter+1 < len(chapters) {
@@ -155,8 +167,9 @@ func readManga(manga *models.Manga) {
 		}
 
 		var selection string
-		err := survey.AskOne(question, &selection, survey.WithValidator(survey.Required))
+		err = survey.AskOne(question, &selection, survey.WithValidator(survey.Required))
 		if err != nil {
+			fmt.Println(err)
 			panic(err)
 		}
 

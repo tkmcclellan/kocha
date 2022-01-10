@@ -13,7 +13,7 @@ import (
 type Provider interface {
 	Search(name string, page uint64) (SearchResult, error)
 	DownloadManga(manga *models.Manga) error
-	DownloadChapter(chapter models.Chapter, completed chan bool)
+	DownloadChapter(chapter models.Chapter)
 	GetManga(url string, dlmode string) (models.Manga, error)
 }
 
