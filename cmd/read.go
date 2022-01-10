@@ -45,6 +45,11 @@ func init() {
 func Read() {
 	manga := kocha.List()
 
+	if len(manga) == 0 {
+		fmt.Println("Please add a manga first!")
+		os.Exit(1)
+	}
+
 	var options []string
 	items := make(map[string]models.Manga)
 	for _, m := range manga {
