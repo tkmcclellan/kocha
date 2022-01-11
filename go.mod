@@ -18,6 +18,7 @@ require (
 
 require (
 	github.com/andybalholm/cascadia v1.2.0 // indirect
+	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.2 // indirect

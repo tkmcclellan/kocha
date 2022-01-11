@@ -28,3 +28,27 @@ func Add(manga *models.Manga, dlmode string) error {
 
 	return nil
 }
+
+func AddFromUrl(url string, dlmode string) error {
+	provider, err := providers.FindProviderFromUrl(url)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	manga, err := provider.GetManga(url, dlmode)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	manga.Create()
+
+	err = provider.DownloadManga(&manga)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	return nil
+}

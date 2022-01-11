@@ -3,11 +3,11 @@ package providers
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -21,23 +21,13 @@ type MangaKakalot struct{}
 func (m MangaKakalot) Search(name string, page uint64) (SearchResult, error) {
 	var result SearchResult
 
-	res, err := http.Get(fmt.Sprintf("https://ww.mangakakalot.tv/search/%s?page=%d", name, page))
-	if err != nil {
-		return result, err
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != 200 {
-		return result, errors.New("mangakakalot search failed")
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
+	doc, err := FetchDocument(fmt.Sprintf("https://ww.mangakakalot.tv/search/%s?page=%d", name, page))
 	if err != nil {
 		fmt.Println(err)
 		return result, errors.New("mangakakalot search failed")
 	}
 
+	var parseError error
 	doc.Find("div.story_item").Each(func(i int, s *goquery.Selection) {
 		// For each item found, get the title
 		var manga models.Manga
@@ -77,13 +67,18 @@ func (m MangaKakalot) Search(name string, page uint64) (SearchResult, error) {
 
 		update_time, err := time.Parse(fmt.Sprintf("02 Jan 2006 15:04 %s", time_suffix), fmt.Sprintf("%s %s %s", date, year, time_string))
 		if err != nil {
-			fmt.Println(err)
+			parseError = err
 			return
 		}
 		manga.Updated = update_time
 
 		result.Manga = append(result.Manga, manga)
 	})
+
+	if parseError != nil {
+		fmt.Println(parseError)
+		return result, errors.New("Failed to parse manga")
+	}
 
 	r1 := regexp.MustCompile(`[0-9]+`)
 	total_pages, err := strconv.ParseUint(r1.FindString(doc.Find("a.page_last").Text()), 10, 64)
@@ -99,25 +94,10 @@ func (m MangaKakalot) Search(name string, page uint64) (SearchResult, error) {
 	return result, nil
 }
 
-func (mangakakalot MangaKakalot) DownloadChapter(chapter models.Chapter, completed chan bool) {
-	res, err := http.Get(chapter.Uri)
+func (mangakakalot MangaKakalot) DownloadChapter(chapter models.Chapter) {
+	doc, err := FetchDocument(chapter.Uri)
 	if err != nil {
 		fmt.Println(err)
-		completed <- false
-		return
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != 200 {
-		fmt.Println("downloading chapter failed")
-		completed <- false
-		return
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		fmt.Println(err)
-		completed <- false
 		return
 	}
 
@@ -133,27 +113,17 @@ func (mangakakalot MangaKakalot) DownloadChapter(chapter models.Chapter, complet
 	for i := 0; i < numImages; i++ {
 		<-imageCompleted
 	}
-	completed <- true
 
 	err = util.ChapterToPdf(dirname)
 	if err != nil {
+		fmt.Println("here")
 		panic(err)
 	}
 }
 
+// Download chapters of a manga according to the download mode
 func (mangakakalot MangaKakalot) DownloadManga(manga *models.Manga) error {
-	res, err := http.Get(manga.Uri)
-	if err != nil {
-		return err
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != 200 {
-		return errors.New("mangakakalot search failed")
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
+	doc, err := FetchDocument(manga.Uri)
 	if err != nil {
 		fmt.Println(err)
 		return errors.New("mangakakalot search failed")
@@ -196,18 +166,70 @@ func (mangakakalot MangaKakalot) DownloadManga(manga *models.Manga) error {
 
 	downloadCount := len(downloadList)
 	if downloadCount > 0 {
+		var wg sync.WaitGroup
 		bar := pb.StartNew(downloadCount)
-		completed := make(chan bool)
 		for _, chapter := range downloadList {
-			go mangakakalot.DownloadChapter(chapter, completed)
+			wg.Add(1)
+			go func(chapter models.Chapter) {
+				mangakakalot.DownloadChapter(chapter)
+				wg.Done()
+				bar.Increment()
+			}(chapter)
 		}
 
-		for range downloadList {
-			<-completed
-			bar.Increment()
-		}
+		wg.Wait()
 		bar.Finish()
-
 	}
 	return nil
+}
+
+// Get a manga from a provided URL
+func (m MangaKakalot) GetManga(url string, dlmode string) (models.Manga, error) {
+	var manga models.Manga
+
+	doc, err := FetchDocument(url)
+	if err != nil {
+		fmt.Println(err)
+		return manga, errors.New("mangakakalot search failed")
+	}
+
+	var parseError error
+	doc.Find("ul.manga-info-text").Each(func(i int, s *goquery.Selection) {
+		manga.Provider = "mangakakalot"
+		manga.Title = s.Find("li > h1").Text()
+		manga.Uri = url
+		manga.Dlmode = dlmode
+
+		authors := []string{}
+		first_child := s.Children().Nodes[1].FirstChild
+		last_child := s.Children().Nodes[1].LastChild
+		position := first_child.NextSibling
+		for position != last_child {
+			if position.Type == 3 {
+				authors = append(authors, position.FirstChild.Data)
+			}
+			position = position.NextSibling
+		}
+		manga.Authors = strings.Join(authors, ",")
+
+		raw_time := strings.Trim(strings.SplitN(s.Children().Nodes[3].FirstChild.Data, ":", 2)[1], " ")
+		date_string := raw_time[:strings.Index(raw_time, "-")-1]
+		date_string = strings.ReplaceAll(date_string, ",", " ")
+		time_string := raw_time[strings.Index(raw_time, "-")+1:]
+		parsed_time := strings.SplitN(time_string, " ", -1)
+		time_suffix := parsed_time[len(parsed_time)-1]
+		update_time, err := time.Parse(fmt.Sprintf("Jan 02 2006 15:04 %s", time_suffix), fmt.Sprintf("%s %s", date_string, time_string))
+		if err != nil {
+			parseError = err
+			return
+		}
+		manga.Updated = update_time
+	})
+
+	if parseError != nil {
+		fmt.Println(parseError)
+		return manga, errors.New("Failed to parse manga")
+	}
+
+	return manga, nil
 }

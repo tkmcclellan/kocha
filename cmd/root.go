@@ -42,7 +42,7 @@ var rootCmd = &cobra.Command{
 			if selection == "Quit" {
 				break
 			} else if selection == "Add" {
-				Add("", "", "")
+				Add("", "", "", "")
 			} else if selection == "List" {
 				List()
 			} else if selection == "Remove" {

@@ -14,6 +14,10 @@ type Chapter struct {
 	// Manga   Manga
 }
 
+func (Chapter) TableName() string {
+	return "chapters"
+}
+
 func init() {
 	db, cancel := util.Database()
 	defer cancel()
